@@ -14,7 +14,6 @@ lib = get_library(
 )
 
 FFMS_VERSION = (2 << 24) | (17 << 16) | (3 << 8) | 0
-FUNCTYPE = WINFUNCTYPE if os.name == "nt" else CFUNCTYPE
 STRING = c_char_p
 
 
@@ -129,8 +128,7 @@ class FFMS_TrackTimeBase(Structure):
     pass
 
 
-int64_t = c_int64
-FFMS_TrackTimeBase._fields_ = [("Num", int64_t), ("Den", int64_t)]
+FFMS_TrackTimeBase._fields_ = [("Num", c_int64), ("Den", c_int64)]
 
 
 class FFMS_FrameInfo(Structure):
@@ -138,7 +136,7 @@ class FFMS_FrameInfo(Structure):
 
 
 FFMS_FrameInfo._fields_ = [
-    ("PTS", int64_t),
+    ("PTS", c_int64),
     ("RepeatPict", c_int),
     ("KeyFrame", c_int),
 ]
@@ -177,12 +175,17 @@ FFMS_AudioProperties._fields_ = [
     ("SampleRate", c_int),
     ("BitsPerSample", c_int),
     ("Channels", c_int),
-    ("ChannelLayout", int64_t),
-    ("NumSamples", int64_t),
+    ("ChannelLayout", c_int64),
+    ("NumSamples", c_int64),
     ("FirstTime", c_double),
     ("LastTime", c_double),
 ]
-TIndexCallback = FUNCTYPE(c_int, int64_t, int64_t, c_void_p)
+
+# Since the ffms2.dll is cross-compiled, the calling convention is cdecl.
+# If you have compiled the ffms2.dll directly on Windows using MSVC,
+# you will probably use the stdcall convention, in that case,
+# replace CFUNCTYPE with WINFUNCTYPE.
+TIndexCallback = CFUNCTYPE(c_int, c_int64, c_int64, c_void_p)
 
 FFMS_Init = lib.FFMS_Init
 FFMS_Init.restype = None
@@ -246,8 +249,8 @@ FFMS_GetAudio.restype = c_int
 FFMS_GetAudio.argtypes = [
     POINTER(FFMS_AudioSource),
     c_void_p,
-    int64_t,
-    int64_t,
+    c_int64,
+    c_int64,
     POINTER(FFMS_ErrorInfo),
 ]
 try:
@@ -267,7 +270,7 @@ except AttributeError:
     FFMS_SetOutputFormatV.restype = c_int
     FFMS_SetOutputFormatV.argtypes = [
         POINTER(FFMS_VideoSource),
-        int64_t,
+        c_int64,
         c_int,
         c_int,
         c_int,
